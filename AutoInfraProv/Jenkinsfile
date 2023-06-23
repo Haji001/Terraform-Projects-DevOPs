@@ -1,0 +1,68 @@
+pipeline {
+    agent {
+        label "ashds65463-image-agent"
+    }
+
+    tools {
+        /// Place build tools here if any
+    }
+    parameters {
+        choice(
+            name: "branch",
+            choices: ["master", "py-dn3", "py-dn4"],
+            description: ""
+        )
+    }
+
+    options {
+        skipDefaultCheckout(true)
+    }
+
+    stages {
+        stage("SCM Codebase Checkout") {
+            steps {
+                git url: 'https://github.com/repo-name/python-app.git'
+            }
+        }
+        stage("Install dependencies") {
+            steps {
+                sh 'curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -'
+                sh 'sudo apt-get install -y nodejs'
+                sh 'npm install'
+            }
+        }
+
+        stage("Build Application") {
+            steps {
+                sh 'npm build'
+            }
+        }
+
+        stage("Deploy Application to the EC2 instance") {
+            steps {
+                sh '''
+                    aws s3 ./dist s3://my-app-bucket
+                    aws s3 cp ./nginx.conf s3://my-app-bucket
+                    aws ec2 run-instances --image-id ${var.ec2_ami_id} --instance-type ${var.ec2_instance_type} --count ${var.ec2_instance_count} --user-data '#!/bin/bash\\naws s3 cp s3://my-app-bucket/nginx.conf /etc/nginx/nginx.conf\\nsystemctl restart nginx'
+                '''
+            }
+        }
+
+        stage("Sleep for 30 seconds") {
+            steps {
+                sh 'sleep 30'
+            }
+        }
+
+        stage('Clean Up Terraform') {
+            steps {
+                approval {
+                    requiredApprovals = 2
+                    title = 'Clean up Terraform infrastructure'
+                    description = 'This step will clean up the Terraform infrastructure that was created during the deployment process.'
+                }
+                sh 'terraform destroy -force'
+            }
+        }
+    }
+}
