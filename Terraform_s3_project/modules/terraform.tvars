@@ -3,5 +3,5 @@ lambda_function_name = "report-cleaner"
 lambda_handler = "report_cleaner.lambda_handler"
 schedule_expression = "cron(0 0 * * SUN)"
 sns_topic_name = "report-alerts"
-sns_subscription_endpoint = "devops@successacademy.com"   #Please change the email your correct email address
+sns_subscription_endpoint = "devops@scompany.com"  
 
