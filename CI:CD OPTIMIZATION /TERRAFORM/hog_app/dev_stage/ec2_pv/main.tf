@@ -58,7 +58,7 @@ module "records" {
 tags = merge(
   
     { 
-        "app" == var.application_name
+        "app" == var.app_name
         "env" == var.env
         "owner" == var.owner
     }
