@@ -1,0 +1,96 @@
+
+
+pipeline {
+  agent {
+    label 'iTgde-k8-slave'
+  }
+
+  }
+  parameters {
+    choice(
+      name: '',
+      choices: ['7.1.1', '7.1.2'],
+      description: 'Terraform version'
+    )
+
+    }
+  options {
+        skipDefaultCheckout(true)
+  }
+  stages {
+    stage('Clean Workspace') {
+        steps {
+            cleanWs()
+            }
+    
+        }   
+    
+    }
+    stage('SCM checkout') {
+        steps {
+            checkout([
+                $class: 'GitScm',
+                branches: [[name: '*intr-prov']],
+                doGenerateSubmoduleConfigurations: false,
+                extensions: [],
+                submoduleCfg: [],
+                userRemoteConfigs: [[
+                    credentialsId: "45815s-09yd-48tewfs-sgf564-6546sag44fg6s4",
+                    url: 'https://ghaz1.asic-devops.company.com/folder/main.tf'
+                ]]
+
+            ])
+
+            
+        }
+    }
+    stage('Set aws credentials') {
+        steps {
+            script {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) 
+
+                    sh 'export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID'
+                    sh 'export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY'
+            }
+        }
+    }
+    stage('Initialize Terraform') {
+        steps {
+            script {
+                def tfHome = tool name: 'Terraform', type: 'ToolType'
+                env.PATH = "${tfHome}/bin:${env.PATH}"
+                
+
+                def resourceDirs = findFiles(glob: 'CI:CD OPTIMIZATION/*/main.tf')
+                for (resourceDir in resourceDirs) {
+                    def directory = resourceDir.directory
+                    def resourceType = directory.tokenize('/')[-2]
+
+                    sh 'cd ${directory} && terraform init'
+                    sh 'cd ${directory} && terraform plan -out-tfplan'
+                    sh 'cd ${directory} && terraform apply -auto-approve tfplan'
+                }
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+//  checkout([$class: 'GitSCM',
+//     branches: [[name: '*/feature/devops-anuncement']],
+//     doGenerateSubmoduleConfigurations: false,
+//     extensions: [],
+//     submoduleCfg: [],
+//     userRemoteConfigs: [[credentialsId: '123456789875464364364', url: 'https://ghdp1.devops.jamschool.com/PQ/sgs-web.git']]
+// ])
