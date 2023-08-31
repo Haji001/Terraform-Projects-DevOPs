@@ -1,0 +1,43 @@
+
+pipeline {
+    agent any 
+    tools {
+        nodejs 'nodejs'
+    }
+    parameters {
+        choice(
+            name: 'VERSION',
+            choices: ['7.1.0', '7.1.1', '7.1.2']
+            description: ''
+        )
+    }
+    stages {
+        stage('Compilation'){
+            steps {
+                sh 'npm cache clean --force'
+                sh 'npm install'
+                sh 'npm run build'
+            }
+        }
+        stage('Build image'){
+            steps {
+                sh 'docker build -t CI:CD OPTIMIZATION /App'
+            }
+        }
+        stage('Deploy'){
+            steps {
+                script {
+                    def dockerCmD = 'docker run --name hogContainer -p 300:300 -d hog_app:latest'
+                    sshagent(['ashgrh654a5s6fsuhg'])
+                        sh 'ssh -o StrictHostKeyChecking=no nrdev@3.89.455.96 ${dockerCmD}'
+                }
+                
+            }
+        }
+        stage('Clean workspace') {
+            steps {
+
+            }
+        }
+    }
+}
